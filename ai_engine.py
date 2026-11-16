@@ -1,41 +1,33 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 class AIReportGenerator:
-    def __init__(self, model_name: str = "google/flan-t5-small"):
+    def __init__(self, model_name: str = "Qwen/Qwen2.5-0.5B-Instruct"):
         print(f"[INFO] Завантаження локальної AI моделі ({model_name})...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name)
         self.model.eval()
 
     def generate_summary(self, stats_summary: str, anomalies_count: int) -> str:
-        prompt = (
-            "Analyze these dataset statistics and describe the main trends "
-            "and anomalies in professional business terms:"
-        )
-        inputs = self.tokenizer(prompt, return_tensors="pt", max_length=256, truncation=True)
+        messages = [
+            {"role": "system", "content": "Ти професійний бізнес-аналітик. Пиши стисло, грамотно, українською мовою."},
+            {"role": "user", "content": f"Зроби короткий аналітичний висновок (2-3 речення) по набору даних на 550 рядків, де знайдено {anomalies_count} аномалій (викидів)."}
+        ]
+        text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = self.tokenizer([text], return_tensors="pt")
 
         with torch.inference_mode():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=100,
+                max_new_tokens=150,
                 do_sample=True,
-                temperature=0.7,
-                no_repeat_ngram_size=2,
+                temperature=0.6
             )
 
-        ai_result = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        # Захист від некоректної генерації або зациклення
-        if not ai_result or "-0.014" in ai_result or len(ai_result) < 5:
-            ai_result = (
-                "На основі статистичного аналізу набору даних виявлено стабільний розподіл "
-                "основних числових показників із наявністю окремих значних викидів (аномалій), "
-                "що може свідчити про нетипові замовлення або акційні піки."
-            )
+        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, outputs)]
+        ai_result = self.tokenizer.decode(generated_ids[0], skip_special_tokens=True).strip()
 
         full_report = f"=== AI АНАЛІТИЧНИЙ ЗВІТ ===\n\n{ai_result}\n\n"
         full_report += f"Загальна кількість знайдених аномалій у даних (IsolationForest): {anomalies_count}\n"
         return full_report
-

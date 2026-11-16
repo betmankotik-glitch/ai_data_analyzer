@@ -18,7 +18,7 @@ class AIDataAnalyzerApp:
 
         # Підключаємо модулі аналітики та штучного інтелекту
         self.analyzer = DataAnalyzer()
-        self.ai_generator = AIReportGenerator("google/flan-t5-small")
+        self.ai_generator = AIReportGenerator()
 
         self.create_widgets()
 
