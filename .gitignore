@@ -1,0 +1,6 @@
+.venv/
+.env
+.idea/
+__pycache__/
+output_report.txt
+cleaned_data.csv
