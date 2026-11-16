@@ -18,7 +18,7 @@ class AIDataAnalyzerApp:
 
         # Підключаємо модулі аналітики та штучного інтелекту
         self.analyzer = DataAnalyzer()
-        self.ai_generator = AIReportGenerator()
+        self.ai_generator = AIReportGenerator("Qwen/Qwen2.5-0.5B-Instruct")
 
         self.create_widgets()
 
